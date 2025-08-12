@@ -4,3 +4,7 @@ psycopg2-binary
 jupyter
 matplotlib
 python-dotenv
+dagster
+dagster-webserver
+dagster-dbt
+dbt-postgres

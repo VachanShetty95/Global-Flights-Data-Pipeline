@@ -1,0 +1,79 @@
+version: 2
+
+models:
+  - name: dim_airlines
+    description: "Dimension table for airlines."
+    columns:
+      - name: iata_code
+        description: "Standard IATA airline code."
+        tests:
+          - unique
+          - not_null
+      - name: airline_name
+        description: "Full name of the airline."
+        tests:
+          - not_null
+
+  - name: dim_airports
+    description: "Dimension table for airports."
+    columns:
+      - name: iata_code
+        description: "Standard IATA airport code."
+        tests:
+          - unique
+          - not_null
+      - name: airport_name
+        description: "Name of the airport."
+        tests:
+          - not_null
+      - name: country
+        description: "Country of the airport."
+        tests:
+          - not_null
+          
+  - name: dim_dates
+    description: "Dimension table for dates."
+    columns:
+      - name: date_key
+        description: "Unique date integer key."
+        tests:
+          - unique
+          - not_null
+      - name: full_date
+        description: "Actual date value."
+        tests:
+          - not_null
+
+  - name: fact_flights
+    description: "Fact table recording all flights."
+    columns:
+      - name: flight_id
+        description: "Unique flight identifier."
+        tests:
+          - unique
+          - not_null
+      - name: airline_id
+        description: "Foreign key to dim_airlines."
+        tests:
+          - relationships:
+              to: ref('dim_airlines')
+              field: iata_code
+      - name: origin_airport
+        description: "Foreign key to dim_airports for origin."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_airports')
+              field: iata_code
+      - name: destination_airport
+        description: "Foreign key to dim_airports for destination."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_airports')
+              field: iata_code
+      - name: flight_status
+        description: "Status of the flight (e.g. Cancelled, Delayed, On Time)."
+        tests:
+          - accepted_values:
+              values: ['On Time', 'Delayed', 'Cancelled', 'Diverted', 'Unknown']

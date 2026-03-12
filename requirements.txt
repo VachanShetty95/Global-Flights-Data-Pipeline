@@ -4,3 +4,10 @@ psycopg2-binary
 jupyter
 matplotlib
 python-dotenv
+pydantic
+pydantic-settings
+typer
+pytest
+dagster
+dagster-webserver
+dagster-dbt

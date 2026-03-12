@@ -1,0 +1,31 @@
+groups:
+  - name: pipeline_alerts
+    rules:
+      - alert: HighQueryLatency
+        expr: rate(pg_stat_database_xact_commit[5m]) < 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database transaction rate is suspiciously low"
+          description: "No transactions processed in the last 5 minutes."
+          
+      - alert: PipelineFailed
+        expr: dagster_run_status{status="FAILURE"} > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Dagster Pipeline Failure"
+          description: "One or more Dagster runs have failed."
+
+  - name: system_alerts
+    rules:
+      - alert: HighCpuLoad
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "Node {{ $labels.instance }} has > 80% CPU usage."

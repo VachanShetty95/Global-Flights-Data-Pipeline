@@ -1,0 +1,30 @@
+{
+  "title": "Pipeline Monitoring",
+  "uid": "pipeline-monitor",
+  "panels": [
+    {
+      "title": "Postgres Active Connections",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "pg_stat_database_numbackends",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "title": "Dagster Runs Successful",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "dagster_run_status{status='SUCCESS'}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    }
+  ],
+  "schemaVersion": 30,
+  "timezone": "browser"
+}

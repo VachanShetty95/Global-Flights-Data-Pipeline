@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: flights_pg
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-flights_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-flights_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-flights_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - data_network
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter
+    container_name: flights_pg_exporter
+    environment:
+      DATA_SOURCE_NAME: ${EXPORTER_DATABASE_URL:-postgresql://flights_user:flights_pass@postgres:5432/flights_db?sslmode=disable}
+    ports:
+      - "9187:9187"
+    depends_on:
+      - postgres
+    networks:
+      - data_network
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: flights_node_exporter
+    ports:
+      - "9100:9100"
+    networks:
+      - data_network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: flights_prometheus
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    depends_on:
+      - postgres-exporter
+      - node-exporter
+    networks:
+      - data_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: flights_grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ../monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - data_network
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: flights_metabase
+    ports:
+      - "${METABASE_PORT:-3001}:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: ${POSTGRES_DB:-flights_db}
+      MB_DB_PORT: 5432
+      MB_DB_USER: ${POSTGRES_USER:-flights_user}
+      MB_DB_PASS: ${POSTGRES_PASSWORD:-flights_pass}
+      MB_DB_HOST: postgres
+    depends_on:
+      - postgres
+    networks:
+      - data_network
+
+  dagster:
+    image: python:3.11-slim
+    container_name: flights_dagster
+    volumes:
+      - ../:/usr/src/app
+    working_dir: /usr/src/app
+    environment:
+      DAGSTER_HOME: ${DAGSTER_HOME:-/usr/src/app/dagster_home}
+      POSTGRES_USER: ${POSTGRES_USER:-flights_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-flights_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-flights_db}
+      POSTGRES_HOST: postgres
+    command: >
+      bash -c "pip install -r requirements.txt &&
+               pip install -e dagster/ &&
+               mkdir -p $$DAGSTER_HOME &&
+               dagster-webserver -h 0.0.0.0 -p 3000 -w dagster/workspace.yaml"
+    ports:
+      - "3002:3000"
+    depends_on:
+      - postgres
+    networks:
+      - data_network
+
+volumes:
+  pg_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  data_network:
+    driver: bridge
